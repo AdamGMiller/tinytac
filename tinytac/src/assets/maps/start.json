@@ -1,0 +1,94 @@
+{
+  "name": "Test map",
+  "tiles": [
+    [
+      {
+        "model": "stone_rocks.glb",
+        "walkable": false
+      },
+      {
+        "model": "grass.glb",
+        "walkable": true
+      },
+      {
+        "model": "dirt.glb",
+        "walkable": true,
+        "playerStart": true
+      },
+      {
+        "model": "sand.glb",
+        "walkable": true
+      },
+      {
+        "model": "water.glb",
+        "walkable": false
+      }
+    ],
+    [
+      {
+        "model": "stone_hill.glb",
+        "walkable": false
+      },
+      {
+        "model": "grass.glb",
+        "walkable": true
+      },
+      {
+        "model": "dirt.glb",
+        "walkable": true
+      },
+      {
+        "model": "sand.glb",
+        "walkable": true
+      },
+      {
+        "model": "water.glb",
+        "walkable": false
+      }
+    ],
+    [
+      {
+        "model": "grass_forest.glb",
+        "walkable": false
+      },
+      {
+        "model": "grass.glb",
+        "walkable": true
+      },
+      {
+        "model": "dirt.glb",
+        "walkable": true
+      },
+      {
+        "model": "grass.glb",
+        "walkable": true
+      },
+      {
+        "model": "grass_forest.glb",
+        "walkable": true
+      }
+    ],
+    [
+      {
+        "model": "stone_hill.glb",
+        "walkable": false
+      },
+      {
+        "model": "grass.glb",
+        "walkable": true
+      },
+      {
+        "model": "dirt.glb",
+        "walkable": true
+      },
+      {
+        "model": "grass.glb",
+        "walkable": true
+      },
+      {
+        "model": "grass.glb",
+        "walkable": true
+      }
+    ]
+  ]
+}

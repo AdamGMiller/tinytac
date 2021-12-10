@@ -182,8 +182,8 @@ export class MapService {
         this.grid = Grid({
           rows: this.gridX,
           cols: this.gridY,
-          hexSize: { x: 1, y: 1 },
-          type: 'flat',
+          hexSize: { x: 0.575, y: 0.575 },
+          type: 'pointy',
         });
 
         const tiles = this.map.tiles.reduce(
@@ -242,13 +242,16 @@ export class MapService {
         const modelMeshes = this.modelMeshes.find(
           (mesh) => mesh.name === tile.model
         );
+        const q = columnIndex - (rowIndex - (rowIndex & 1)) / 2
+        const r = rowIndex;
+        const hex = { q: q, r: r, s: -q - r };
+        const centerOfHex = this.grid.centerOfHex(hex);
         modelMeshes.meshes.forEach((mesh: AbstractMesh, index: number) => {
           var newInstance = (mesh as Mesh).instantiateHierarchy(this.rootMesh);
           newInstance.name = `tile${rowIndex}-${columnIndex}-${index}`;
           newInstance.setParent(this.rootMesh);
-          const offsetX = (columnIndex % 2) * (this.meshSize / 2);
-          newInstance.position.x = rowIndex * this.meshSize + offsetX;
-          newInstance.position.z = columnIndex * this.meshSize;
+          newInstance.position.x = centerOfHex.x;
+          newInstance.position.z = centerOfHex.y;
         });
       });
     });

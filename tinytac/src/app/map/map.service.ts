@@ -11,7 +11,7 @@ import {
   PointerEventTypes,
   PointerInfo,
 } from '@babylonjs/core/Events/pointerEvents';
-import { PointLight, ShadowGenerator } from '@babylonjs/core/Lights';
+import { HemisphericLight, PointLight, ShadowGenerator } from '@babylonjs/core/Lights';
 import '@babylonjs/core/Loading/loadingScreen';
 import { Color4 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
@@ -19,11 +19,12 @@ import { AbstractMesh, MeshBuilder } from '@babylonjs/core/Meshes';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { Scene } from '@babylonjs/core/scene';
 import '@babylonjs/loaders/glTF';
-import { Grid as HexGrid } from 'hexapi';
+import { Grid, Engine as HexEngine } from 'hexapi';
 import * as _ from 'lodash';
 import { ModelMeshes } from '../model/model-meshes.model';
 import { TacMap } from '../model/tacmap.model';
 import { BabylonUtilService } from '../util/babylon-util.service';
+import * as hexapi from 'hexapi';
 
 @Injectable({
   providedIn: 'root',
@@ -33,6 +34,7 @@ export class MapService {
   protected canvas: HTMLCanvasElement;
   protected camera: FreeCamera | ArcRotateCamera;
   protected light: PointLight;
+  protected diffuseLight: HemisphericLight;
   public meshSize = 1.0;
   private assetsManager: AssetsManager;
   private modelCount = 0;
@@ -42,7 +44,7 @@ export class MapService {
   scene: Scene;
   currentGroup: AnimationGroup[];
   map: TacMap;
-  grid: HexGrid;
+  grid: hexapi.Grid;
   gridX: number;
   gridY: number;
 
@@ -51,7 +53,7 @@ export class MapService {
     @Inject(DOCUMENT) readonly document: Document,
     private http: HttpClient,
     private utilService: BabylonUtilService
-  ) {}
+  ) { }
 
   createScene(canvas: ElementRef<HTMLCanvasElement>): void {
     //Animation['AllowMatricesInterpolation'] = true;
@@ -67,9 +69,11 @@ export class MapService {
       { radius: 0.01 },
       this.scene
     );
-
-    this.light = new PointLight('light1', new Vector3(2, 7, 3), this.scene);
+    this.diffuseLight = new HemisphericLight("diffuse_light", new Vector3(0, 1, 0), this.scene);
+    this.diffuseLight.intensity = 0.1;
+    this.light = new PointLight('light1', new Vector3(0, 8, 0), this.scene);
     this.light.intensity = 150;
+
 
     // Shadows
     var shadowGenerator = new ShadowGenerator(1024, this.light);
@@ -105,6 +109,7 @@ export class MapService {
     //this.playerService.addPlayer(this.scene, camera);
 
     this.scene.onPointerObservable.add((pointerInfo: PointerInfo) => {
+      return;
       switch (pointerInfo.type) {
         case PointerEventTypes.POINTERDOWN:
           console.log('POINTER DOWN');
@@ -148,7 +153,7 @@ export class MapService {
     this.engine.stopRenderLoop();
     this.engine.dispose();
     this.camera.dispose();
-    window.removeEventListener('resize', () => {});
+    window.removeEventListener('resize', () => { });
   }
 
   private startTheEngine() {
@@ -174,25 +179,20 @@ export class MapService {
         this.map = result;
         this.gridY = result.tiles[0].length;
         this.gridX = result.tiles.length;
-
-        /*
-        this.grid = new HexGrid({
+        this.grid = Grid({
           rows: this.gridX,
           cols: this.gridY,
           hexSize: { x: 1, y: 1 },
           type: 'flat',
         });
-        */
 
         const tiles = this.map.tiles.reduce(
           (accumulator, value) => accumulator.concat(value),
           []
         );
-        console.log(tiles);
         const modelNames = tiles.map((tile) => tile.model);
 
         const uniqueModelNames: string[] = _.uniq(modelNames);
-        console.log(uniqueModelNames);
         this.modelCount = uniqueModelNames.length;
         uniqueModelNames.forEach((model: string) => {
           var meshTask = this.assetsManager.addMeshTask(
@@ -216,7 +216,6 @@ export class MapService {
   }
 
   private meshLoaded(task: MeshAssetTask) {
-    console.log('mesh loaded');
     const index = this.modelMeshes.length;
     this.modelMeshes[index] = {
       name: task.name,
@@ -224,8 +223,8 @@ export class MapService {
     };
     task.loadedMeshes.forEach((mesh: AbstractMesh) => {
       mesh.isVisible = false;
+      mesh.setParent(null);
     });
-    console.log(`loaded ${task.name}`);
   }
 
   private meshError(task, message, exception): void {
@@ -234,26 +233,15 @@ export class MapService {
   }
 
   private updateProgress(remainingCount, totalCount, lastFinishedTask) {
-    console.log(remainingCount);
-    /*
-    this.engine.loadingUIText =
-      'We are loading the scene. ' +
-      remainingCount +
-      ' out of ' +
-      totalCount +
-      ' items still need to be loaded.';
-      */
+    this.engine.loadingScreen.loadingUIText = `Loading (${totalCount - remainingCount} of ${totalCount})`;
   }
 
   createMapFromTiles(): void {
     this.map.tiles.forEach((row, rowIndex) => {
       row.forEach((tile, columnIndex) => {
-        console.log(tile);
         const modelMeshes = this.modelMeshes.find(
           (mesh) => mesh.name === tile.model
         );
-        console.log(this.modelMeshes);
-        console.log(modelMeshes);
         modelMeshes.meshes.forEach((mesh: AbstractMesh, index: number) => {
           var newInstance = (mesh as Mesh).instantiateHierarchy(this.rootMesh);
           newInstance.name = `tile${rowIndex}-${columnIndex}-${index}`;

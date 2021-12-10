@@ -11,7 +11,11 @@ import {
   PointerEventTypes,
   PointerInfo,
 } from '@babylonjs/core/Events/pointerEvents';
-import { HemisphericLight, PointLight, ShadowGenerator } from '@babylonjs/core/Lights';
+import {
+  HemisphericLight,
+  PointLight,
+  ShadowGenerator,
+} from '@babylonjs/core/Lights';
 import '@babylonjs/core/Loading/loadingScreen';
 import { Color4 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
@@ -19,12 +23,15 @@ import { AbstractMesh, MeshBuilder } from '@babylonjs/core/Meshes';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { Scene } from '@babylonjs/core/scene';
 import '@babylonjs/loaders/glTF';
-import { Grid, Engine as HexEngine } from 'hexapi';
 import * as _ from 'lodash';
+import { ImportMap } from '../model/import-map.model';
 import { ModelMeshes } from '../model/model-meshes.model';
-import { TacMap } from '../model/tacmap.model';
+import { Orientation } from '../model/orientation.model';
+import { Point } from '../model/point.model';
+import { TacMap } from '../model/tac-map.model';
 import { BabylonUtilService } from '../util/babylon-util.service';
-import * as hexapi from 'hexapi';
+import { Hex } from '../util/hex';
+import { Layout } from '../util/layout';
 
 @Injectable({
   providedIn: 'root',
@@ -39,12 +46,30 @@ export class MapService {
   private assetsManager: AssetsManager;
   private modelCount = 0;
   private modelMeshes: ModelMeshes[] = [];
+  public pointyHexOrientation = new Orientation(
+    Math.sqrt(3.0),
+    Math.sqrt(3.0) / 2.0,
+    0.0,
+    3.0 / 2.0,
+    Math.sqrt(3.0) / 3.0,
+    -1.0 / 3.0,
+    0.0,
+    2.0 / 3.0,
+    0.5
+  );
+  public hexSize: Point = { x: 0.575, y: 0.575 };
+  public mapOrigin: Point = { x: 0, y: 0 };
+  public hexLayout = new Layout(
+    this.pointyHexOrientation,
+    this.hexSize,
+    this.mapOrigin
+  );
 
   rootMesh: Mesh;
   scene: Scene;
   currentGroup: AnimationGroup[];
   map: TacMap;
-  grid: hexapi.Grid;
+  importMap: ImportMap;
   gridX: number;
   gridY: number;
 
@@ -53,7 +78,7 @@ export class MapService {
     @Inject(DOCUMENT) readonly document: Document,
     private http: HttpClient,
     private utilService: BabylonUtilService
-  ) { }
+  ) {}
 
   createScene(canvas: ElementRef<HTMLCanvasElement>): void {
     //Animation['AllowMatricesInterpolation'] = true;
@@ -69,11 +94,14 @@ export class MapService {
       { radius: 0.01 },
       this.scene
     );
-    this.diffuseLight = new HemisphericLight("diffuse_light", new Vector3(0, 1, 0), this.scene);
+    this.diffuseLight = new HemisphericLight(
+      'diffuse_light',
+      new Vector3(0, 1, 0),
+      this.scene
+    );
     this.diffuseLight.intensity = 0.1;
     this.light = new PointLight('light1', new Vector3(0, 8, 0), this.scene);
     this.light.intensity = 150;
-
 
     // Shadows
     var shadowGenerator = new ShadowGenerator(1024, this.light);
@@ -153,7 +181,7 @@ export class MapService {
     this.engine.stopRenderLoop();
     this.engine.dispose();
     this.camera.dispose();
-    window.removeEventListener('resize', () => { });
+    window.removeEventListener('resize', () => {});
   }
 
   private startTheEngine() {
@@ -175,18 +203,18 @@ export class MapService {
 
   public loadMap(map: string, scene: Scene) {
     this.http.get(`assets/maps/${map}.json`).subscribe(
-      (result: TacMap) => {
-        this.map = result;
-        this.gridY = result.tiles[0].length;
-        this.gridX = result.tiles.length;
-        this.grid = Grid({
-          rows: this.gridX,
-          cols: this.gridY,
-          hexSize: { x: 0.575, y: 0.575 },
-          type: 'pointy',
-        });
+      (result: ImportMap) => {
+        this.importMap = result;
+        this.gridY = this.importMap.tiles[0].length;
+        this.gridX = this.importMap.tiles.length;
 
-        const tiles = this.map.tiles.reduce(
+        this.map = {
+          name: this.importMap.name,
+          tileSize: 0.575,
+          map: [],
+        };
+
+        const tiles = this.importMap.tiles.reduce(
           (accumulator, value) => accumulator.concat(value),
           []
         );
@@ -233,19 +261,22 @@ export class MapService {
   }
 
   private updateProgress(remainingCount, totalCount, lastFinishedTask) {
-    this.engine.loadingScreen.loadingUIText = `Loading (${totalCount - remainingCount} of ${totalCount})`;
+    this.engine.loadingScreen.loadingUIText = `Loading (${
+      totalCount - remainingCount
+    } of ${totalCount})`;
   }
 
   createMapFromTiles(): void {
-    this.map.tiles.forEach((row, rowIndex) => {
+    this.importMap.tiles.forEach((row, rowIndex) => {
       row.forEach((tile, columnIndex) => {
         const modelMeshes = this.modelMeshes.find(
           (mesh) => mesh.name === tile.model
         );
-        const q = columnIndex - (rowIndex - (rowIndex & 1)) / 2
+        const q = columnIndex - (rowIndex - (rowIndex & 1)) / 2;
         const r = rowIndex;
-        const hex = { q: q, r: r, s: -q - r };
-        const centerOfHex = this.grid.centerOfHex(hex);
+        const hex = new Hex(q, r, -q - r);
+        this.map.map.push(hex);
+        const centerOfHex = this.hexLayout.hexToPixel(hex);
         modelMeshes.meshes.forEach((mesh: AbstractMesh, index: number) => {
           var newInstance = (mesh as Mesh).instantiateHierarchy(this.rootMesh);
           newInstance.name = `tile${rowIndex}-${columnIndex}-${index}`;

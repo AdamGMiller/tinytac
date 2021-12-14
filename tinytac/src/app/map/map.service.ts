@@ -24,11 +24,13 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { Scene } from '@babylonjs/core/scene';
 import '@babylonjs/loaders/glTF';
 import * as _ from 'lodash';
+import { BehaviorSubject } from 'rxjs';
 import { ImportMap } from '../model/import-map.model';
 import { ModelMeshes } from '../model/model-meshes.model';
 import { Orientation } from '../model/orientation.model';
 import { Point } from '../model/point.model';
 import { TacMap } from '../model/tac-map.model';
+import { PlayerService } from '../services/player.service';
 import { BabylonUtilService } from '../util/babylon-util.service';
 import { Hex } from '../util/hex';
 import { Layout } from '../util/layout';
@@ -37,13 +39,15 @@ import { Layout } from '../util/layout';
   providedIn: 'root',
 })
 export class MapService {
+  public mapStatus: BehaviorSubject<'initializing' | 'started' | 'loaded'> =
+    new BehaviorSubject<'initializing' | 'started' | 'loaded'>('initializing');
   protected engine: Engine;
   protected canvas: HTMLCanvasElement;
   protected camera: FreeCamera | ArcRotateCamera;
   protected light: PointLight;
   protected diffuseLight: HemisphericLight;
   public meshSize = 1.0;
-  private assetsManager: AssetsManager;
+  public assetsManager: AssetsManager;
   private modelCount = 0;
   private modelMeshes: ModelMeshes[] = [];
   public pointyHexOrientation = new Orientation(
@@ -68,21 +72,25 @@ export class MapService {
   rootMesh: Mesh;
   scene: Scene;
   currentGroup: AnimationGroup[];
+  mapName: string;
   map: TacMap;
   importMap: ImportMap;
   gridX: number;
   gridY: number;
 
+  get playerStartingHex(): Hex {
+    return this.map.map.find((a) => a.playerStart == true);
+  }
+
   public constructor(
     readonly ngZone: NgZone,
     @Inject(DOCUMENT) readonly document: Document,
     private http: HttpClient,
-    private utilService: BabylonUtilService
+    private utilService: BabylonUtilService,
+    private playerService: PlayerService
   ) {}
 
-  createScene(canvas: ElementRef<HTMLCanvasElement>): void {
-    //Animation['AllowMatricesInterpolation'] = true;
-
+  public createScene(canvas: ElementRef<HTMLCanvasElement>): void {
     this.canvas = canvas.nativeElement;
     this.engine = new Engine(this.canvas, true);
 
@@ -128,9 +136,6 @@ export class MapService {
     // This attaches the camera to the canvas
     camera.attachControl(true);
 
-    // load map tiles
-    this.loadMap('start', this.scene);
-
     // generates the world x-y-z axis for better understanding
     this.utilService.showWorldAxis(this.scene, 8);
 
@@ -164,9 +169,43 @@ export class MapService {
           break;
       }
     });
+
+    this.mapStatus.next('started');
+    this.loadMap();
   }
 
-  start(inZone = true): void {
+  public setMap(map: string) {
+    this.mapName = map;
+  }
+
+  private loadMap() {
+    this.http.get(`assets/maps/${this.mapName}.json`).subscribe(
+      (result: ImportMap) => {
+        this.importMap = result;
+        this.gridY = this.importMap.tiles[0].length;
+        this.gridX = this.importMap.tiles.length;
+
+        this.map = {
+          name: this.importMap.name,
+          tileSize: 0.575,
+          map: [],
+        };
+
+        // load assets that make up map
+        this.getHexMeshes();
+        this.getCharacterMeshes();
+
+        this.assetsManager.onProgress = this.updateProgress.bind(this);
+        this.assetsManager.onFinish = this.finishLoadingMap.bind(this);
+        this.assetsManager.load();
+      },
+      (error) => {
+        console.log('Error:', error);
+      }
+    );
+  }
+
+  public start(inZone = true): void {
     if (inZone) {
       this.ngZone.runOutsideAngular(() => {
         this.startTheEngine();
@@ -176,7 +215,7 @@ export class MapService {
     }
   }
 
-  stop(): void {
+  public stop(): void {
     this.scene.dispose();
     this.engine.stopRenderLoop();
     this.engine.dispose();
@@ -201,54 +240,18 @@ export class MapService {
     window.addEventListener('resize', () => this.engine.resize());
   }
 
-  public loadMap(map: string, scene: Scene) {
-    this.http.get(`assets/maps/${map}.json`).subscribe(
-      (result: ImportMap) => {
-        this.importMap = result;
-        this.gridY = this.importMap.tiles[0].length;
-        this.gridX = this.importMap.tiles.length;
-
-        this.map = {
-          name: this.importMap.name,
-          tileSize: 0.575,
-          map: [],
-        };
-
-        const tiles = this.importMap.tiles.reduce(
-          (accumulator, value) => accumulator.concat(value),
-          []
-        );
-        const modelNames = tiles.map((tile) => tile.model);
-
-        const uniqueModelNames: string[] = _.uniq(modelNames);
-        this.modelCount = uniqueModelNames.length;
-        uniqueModelNames.forEach((model: string) => {
-          var meshTask = this.assetsManager.addMeshTask(
-            `${model}`,
-            '',
-            `./assets/models/hex/${model}`,
-            null
-          );
-          meshTask.onSuccess = this.meshLoaded.bind(this);
-          meshTask.onError = this.meshError.bind(this);
-        });
-
-        this.assetsManager.onProgress = this.updateProgress.bind(this);
-        this.assetsManager.onFinish = this.createMapFromTiles.bind(this);
-        this.assetsManager.load();
-      },
-      (error) => {
-        console.log('Error:', error);
-      }
-    );
-  }
-
   private meshLoaded(task: MeshAssetTask) {
     const index = this.modelMeshes.length;
     this.modelMeshes[index] = {
       name: task.name,
       meshes: task.loadedMeshes,
     };
+
+    // character models are used directly and not cloned since there's just one
+    if (task.rootUrl.indexOf('characters')) {
+      return;
+    }
+
     task.loadedMeshes.forEach((mesh: AbstractMesh) => {
       mesh.isVisible = false;
       mesh.setParent(null);
@@ -266,7 +269,12 @@ export class MapService {
     } of ${totalCount})`;
   }
 
-  createMapFromTiles(): void {
+  private finishLoadingMap(): void {
+    this.createMapFromTiles();
+    this.addCharacter();
+  }
+
+  private createMapFromTiles(): void {
     this.importMap.tiles.forEach((row, rowIndex) => {
       row.forEach((tile, columnIndex) => {
         const modelMeshes = this.modelMeshes.find(
@@ -286,5 +294,57 @@ export class MapService {
         });
       });
     });
+
+    this.mapStatus.next('loaded');
+  }
+
+  private addCharacter(): void {
+    const hex = this.playerStartingHex;
+    console.log(hex);
+    const centerOfHex = this.hexLayout.hexToPixel(hex);
+    console.log(centerOfHex);
+    const characterMeshes = this.modelMeshes.find(
+      (mesh) => mesh.name === this.playerService.character.model
+    );
+
+    characterMeshes.meshes.forEach((mesh) => {
+      mesh.position.x = centerOfHex.x;
+      mesh.position.z = centerOfHex.y;
+    });
+  }
+
+  // add tile loading tasks
+  private getHexMeshes(): void {
+    const tiles = this.importMap.tiles.reduce(
+      (accumulator, value) => accumulator.concat(value),
+      []
+    );
+    const modelNames = tiles.map((tile) => tile.model);
+
+    const uniqueModelNames: string[] = _.uniq(modelNames);
+    this.modelCount = uniqueModelNames.length;
+    uniqueModelNames.forEach((model: string) => {
+      var meshTask = this.assetsManager.addMeshTask(
+        `${model}`,
+        '',
+        `./assets/models/hex/${model}`,
+        null
+      );
+      meshTask.onSuccess = this.meshLoaded.bind(this);
+      meshTask.onError = this.meshError.bind(this);
+    });
+  }
+
+  // loading character model for player
+  private getCharacterMeshes(): void {
+    // TODO: Move all mesh loading into a single service that caches meshes
+    var meshTask = this.assetsManager.addMeshTask(
+      `character`,
+      '',
+      `./assets/${this.playerService.character.model}`,
+      null
+    );
+    meshTask.onSuccess = this.meshLoaded.bind(this);
+    meshTask.onError = this.meshError.bind(this);
   }
 }

@@ -1,0 +1,21 @@
+[
+  {
+    "name": "gunslinger",
+    "model": "licensed/models/characters/cowgirl.glb",
+    "altModel": "models/characters/player.glb",
+    "map": "western",
+    "deck": [
+      "step",
+      "step",
+      "setp",
+      "setp",
+      "setp",
+      "strike",
+      "strike",
+      "strike",
+      "strike",
+      "strike",
+      "strike"
+    ]
+  }
+]

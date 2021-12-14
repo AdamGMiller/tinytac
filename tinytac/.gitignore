@@ -1,5 +1,8 @@
 # See http://help.github.com/ignore-files/ for more about ignoring files.
 
+# licensed models excluded from MIT license
+/src/assets/licensed
+
 # compiled output
 /dist
 /tmp

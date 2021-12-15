@@ -4,6 +4,9 @@ export class Hex {
   walkable: boolean = false;
   playerStart: boolean = false;
   model: string = null;
+  propModel: string = null;
+  propRotation: number = null;
+  height: number;
 
   constructor(public q: number, public r: number, public s: number) {
     if (Math.round(q + r + s) !== 0) throw 'q + r + s must be 0';

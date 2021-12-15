@@ -61,7 +61,7 @@ export class MapService {
     2.0 / 3.0,
     0.5
   );
-  public hexSize: Point = { x: 0.575, y: 0.575 };
+  public hexSize: Point = { x: 1.0, y: 1.0 };
   public mapOrigin: Point = { x: 0, y: 0 };
   public hexLayout = new Layout(
     this.pointyHexOrientation,
@@ -142,30 +142,29 @@ export class MapService {
     //this.playerService.addPlayer(this.scene, camera);
 
     this.scene.onPointerObservable.add((pointerInfo: PointerInfo) => {
-      return;
       switch (pointerInfo.type) {
         case PointerEventTypes.POINTERDOWN:
-          console.log('POINTER DOWN');
+          //console.log('POINTER DOWN');
           break;
         case PointerEventTypes.POINTERUP:
-          console.log('POINTER UP');
+          //console.log('POINTER UP');
           break;
         case PointerEventTypes.POINTERMOVE:
-          console.log('POINTER MOVE');
+          //console.log('POINTER MOVE');
           break;
         case PointerEventTypes.POINTERWHEEL:
-          console.log('POINTER WHEEL');
+          //console.log('POINTER WHEEL');
           break;
         case PointerEventTypes.POINTERPICK:
-          console.log('POINTER PICK');
+          //console.log('POINTER PICK');
           const id = pointerInfo.pickInfo.pickedMesh.uniqueId;
+          console.log(id);
           break;
         case PointerEventTypes.POINTERTAP:
-          console.log('POINTER TAP');
-          console.log(pointerInfo);
+          console.log(pointerInfo.pickInfo.pickedMesh.name);
           break;
         case PointerEventTypes.POINTERDOUBLETAP:
-          console.log('POINTER DOUBLE-TAP');
+          //console.log('POINTER DOUBLE-TAP');
           break;
       }
     });
@@ -248,13 +247,15 @@ export class MapService {
     };
 
     // character models are used directly and not cloned since there's just one
-    if (task.rootUrl.indexOf('characters')) {
+    if (task.rootUrl.indexOf('characters') > -1) {
       return;
     }
 
     task.loadedMeshes.forEach((mesh: AbstractMesh) => {
       mesh.isVisible = false;
+      mesh.isPickable = false;
       mesh.setParent(null);
+      console.log('updated mesh', mesh);
     });
   }
 
@@ -280,20 +281,53 @@ export class MapService {
         const modelMeshes = this.modelMeshes.find(
           (mesh) => mesh.name === tile.model
         );
+
+        // create the hex and assign properties
         const q = columnIndex - (rowIndex - (rowIndex & 1)) / 2;
         const r = rowIndex;
         const hex = new Hex(q, r, -q - r);
+        hex.playerStart = tile.playerStart;
+        hex.walkable = tile.walkable;
+        hex.propModel = tile.propModel;
+        hex.propRotation = tile.propRotation;
+        hex.height = tile.height ?? 0;
+
         this.map.map.push(hex);
         const centerOfHex = this.hexLayout.hexToPixel(hex);
         modelMeshes.meshes.forEach((mesh: AbstractMesh, index: number) => {
           var newInstance = (mesh as Mesh).instantiateHierarchy(this.rootMesh);
           newInstance.name = `tile${rowIndex}-${columnIndex}-${index}`;
-          newInstance.setParent(this.rootMesh);
           newInstance.position.x = centerOfHex.x;
           newInstance.position.z = centerOfHex.y;
+          if (tile.height) {
+            newInstance.position.y = tile.height - 5;
+            console.log(newInstance.position);
+          }
+          newInstance.setParent(this.rootMesh);
         });
+
+        // add prop if needed
+        if (hex.propModel) {
+          const propMeshes = this.modelMeshes.find(
+            (mesh) => mesh.name === tile.propModel
+          );
+          console.log(propMeshes?.name, 'found');
+          if (propMeshes) {
+            propMeshes.meshes.forEach((mesh: AbstractMesh, index: number) => {
+              var newInstance = (mesh as Mesh).instantiateHierarchy(
+                this.rootMesh
+              );
+              newInstance.name = `prop${rowIndex}-${columnIndex}-${index}`;
+              newInstance.setParent(this.rootMesh);
+              newInstance.position.x = centerOfHex.x;
+              newInstance.position.z = centerOfHex.y;
+            });
+          }
+        }
       });
     });
+
+    console.log(this.modelMeshes);
 
     this.mapStatus.next('loaded');
   }
@@ -301,6 +335,7 @@ export class MapService {
   private addCharacter(): void {
     const hex = this.playerStartingHex;
     console.log(hex);
+    console.log(this.playerService.character.model);
     const centerOfHex = this.hexLayout.hexToPixel(hex);
     console.log(centerOfHex);
     const characterMeshes = this.modelMeshes.find(
@@ -319,9 +354,15 @@ export class MapService {
       (accumulator, value) => accumulator.concat(value),
       []
     );
-    const modelNames = tiles.map((tile) => tile.model);
 
-    const uniqueModelNames: string[] = _.uniq(modelNames);
+    // include both tile meshes and prop meshes
+    const hexNames = tiles.map((tile) => tile.model);
+    const propNames = tiles.map((tile) => tile.propModel);
+
+    const uniqueModelNames: string[] = _.compact(
+      _.uniq(_.concat(hexNames, propNames))
+    );
+
     this.modelCount = uniqueModelNames.length;
     uniqueModelNames.forEach((model: string) => {
       var meshTask = this.assetsManager.addMeshTask(
@@ -339,7 +380,7 @@ export class MapService {
   private getCharacterMeshes(): void {
     // TODO: Move all mesh loading into a single service that caches meshes
     var meshTask = this.assetsManager.addMeshTask(
-      `character`,
+      this.playerService.character.model,
       '',
       `./assets/${this.playerService.character.model}`,
       null

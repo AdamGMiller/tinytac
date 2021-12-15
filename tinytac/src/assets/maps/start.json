@@ -3,90 +3,95 @@
   "tiles": [
     [
       {
-        "model": "stone_rocks.glb",
+        "model": "hex_rock_plain.glb",
+        "height": 0.2,
         "walkable": false
       },
       {
-        "model": "grass.glb",
+        "model": "hex_grass.glb",
+        "height": 0.1,
         "walkable": true
       },
       {
-        "model": "dirt.glb",
+        "model": "hex_dirt_plain.glb",
         "walkable": true,
         "playerStart": true
       },
       {
-        "model": "sand.glb",
+        "model": "hex_dirt_plain.glb",
         "walkable": true
       },
       {
-        "model": "water.glb",
+        "model": "hex_grass_plain.glb",
+        "propModel": "prop_tree.glb",
         "walkable": false
       }
     ],
     [
       {
-        "model": "stone_hill.glb",
+        "model": "hex_grass_plain.glb",
+        "propModel": "prop_tree.glb",
+        "propRotation": 20,
         "walkable": false
       },
       {
-        "model": "grass.glb",
+        "model": "hex_dirt_plain.glb",
         "walkable": true
       },
       {
-        "model": "dirt.glb",
+        "model": "hex_dirt_plain.glb",
         "walkable": true
       },
       {
-        "model": "building_cabin.glb",
+        "model": "hex_grass_plain.glb",
         "walkable": true
       },
       {
-        "model": "water.glb",
+        "model": "hex_rock_plain.glb",
         "walkable": false
       }
     ],
     [
       {
-        "model": "grass_forest.glb",
+        "model": "hex_water_plain.glb",
         "walkable": false
       },
       {
-        "model": "grass.glb",
+        "model": "hex_sand_plain.glb",
         "walkable": true
       },
       {
-        "model": "dirt.glb",
+        "model": "hex_grass_plain.glb",
         "walkable": true
       },
       {
-        "model": "grass.glb",
+        "model": "hex_grass_plain.glb",
         "walkable": true
       },
       {
-        "model": "grass_forest.glb",
+        "model": "hex_grass_plain.glb",
         "walkable": true
       }
     ],
     [
       {
-        "model": "stone_hill.glb",
+        "model": "hex_rock_plain.glb",
         "walkable": false
       },
       {
-        "model": "grass.glb",
+        "model": "hex_grass_plain.glb",
         "walkable": true
       },
       {
-        "model": "dirt.glb",
+        "model": "hex_grass_plain.glb",
         "walkable": true
       },
       {
-        "model": "grass.glb",
+        "model": "hex_grass_plain.glb",
         "walkable": true
       },
       {
-        "model": "grass.glb",
+        "model": "hex_grass_plain.glb",
         "walkable": true
       }
     ]

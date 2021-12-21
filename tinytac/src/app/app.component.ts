@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { skipWhile } from 'rxjs/operators';
 import { CharacterOptionService } from './services/character-option.service';
+import { CombatService } from './services/combat.service';
 import { GameService } from './services/game.service';
 @Component({
   selector: 'app-root',
@@ -12,7 +13,8 @@ export class AppComponent implements OnInit {
 
   constructor(
     private characterOptionService: CharacterOptionService,
-    private gameService: GameService
+    private gameService: GameService,
+    private combatService: CombatService
   ) {}
 
   public ngOnInit(): void {

@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { MapService } from '../map/map.service';
+import { CombatService } from './combat.service';
 import { PlayerService } from './player.service';
 
 @Injectable({
@@ -8,7 +9,8 @@ import { PlayerService } from './player.service';
 export class GameService {
   constructor(
     private mapService: MapService,
-    private playerService: PlayerService
+    private playerService: PlayerService,
+    private combatService: CombatService
   ) {}
 
   public start(map: string): void {
@@ -16,5 +18,7 @@ export class GameService {
     // just jump to combat
 
     this.mapService.setMap('start');
+
+    this.combatService.startCombat();
   }
 }

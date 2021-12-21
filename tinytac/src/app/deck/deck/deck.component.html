@@ -1,0 +1,5 @@
+<div class="deck-wrapper">
+    <div class="draw-pile">Draw: {{ (this.deckService.deck$ | async).length }}</div>
+    <div class="hand">Hand: {{ (this.deckService.hand$ | async).length }}</div>
+    <div class="discard-pile">Discard: {{ (this.deckService.discard$ | async).length }}</div>
+</div>

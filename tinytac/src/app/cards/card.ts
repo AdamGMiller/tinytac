@@ -1,4 +1,5 @@
 import { Point } from '../model/point.model';
+import { TargetType } from './target-type.enum';
 
 export class Card {
   tag: string;
@@ -9,6 +10,14 @@ export class Card {
   damage?: number;
 
   canPlay(): boolean {
+    return true;
+  }
+
+  allowedTargets(): TargetType[] {
+    return [TargetType.enemy, TargetType.hex, TargetType.player];
+  }
+
+  isTargetValid(): boolean {
     return true;
   }
 

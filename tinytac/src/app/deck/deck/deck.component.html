@@ -1,5 +1,15 @@
 <div class="deck-wrapper">
-    <div class="draw-pile">Draw: {{ (this.deckService.deck$ | async).length }}</div>
-    <div class="hand">Hand: {{ (this.deckService.hand$ | async).length }}</div>
-    <div class="discard-pile">Discard: {{ (this.deckService.discard$ | async).length }}</div>
+  <div class="draw-pile">
+    Draw:
+    <div class="alert-number">{{ (this.deckService.deck$ | async).length }}</div>
+  </div>
+  <div class="hand">
+    <div *ngFor="let card of this.deckService.hand$ | async">
+        <tt-card [card]="card"></tt-card>
+    </div>
+  </div>
+  <div class="discard-pile">
+    Discard: 
+    <div class="alert-number">{{ (this.deckService.discard$ | async).length }}</div>
+  </div>
 </div>

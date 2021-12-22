@@ -19,9 +19,11 @@ export class DeckService {
   _discard: Card[] = [];
 
   loadDeckFromCharacter(character: Character) {
-    character.deck.forEach((card) => {
-      this._deck.push(this.cardFactoryService.createCard(card));
+    character.deck.forEach((cardTag) => {
+      const card = this.cardFactoryService.createCard(cardTag);
+      this._deck.push(card);
     });
+
     this.shuffleDeck();
   }
 
@@ -49,8 +51,20 @@ export class DeckService {
     this.updateObservables();
   }
 
+  selectCardToPlay(index: number): void {
+    // if card doesn't require a target, just play it
+
+    // see if card requires target, if so, start looking for target
+
+    // have target service report back when a target is selected
+
+    // finish playing card
+  }
+
   playCard(index: number): void {
     this._hand[index].play();
+
+    // either discard the card or if the card is on-time, just remove it completely
     this.discardCard(index);
   }
 

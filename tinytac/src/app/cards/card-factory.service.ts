@@ -15,6 +15,10 @@ export class CardFactoryService {
         return new CardStep();
       case 'strike':
         return new CardStrike();
+
+      case 'default': {
+        console.log(card + ' is not a valid card');
+      }
     }
   }
 }

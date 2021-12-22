@@ -1,7 +1,27 @@
 .deck-wrapper {
-    position: absolute;
-    bottom: 0px;
-    display: flex;
-    width: 100%;
-    justify-content: space-between;
+  position: absolute;
+  bottom: 0px;
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.hand {
+  display: flex;
+  flex-direction: row;
+}
+
+.alert-number {
+  display: inline-block;
+  background: red;
+  border-radius: 0.8em;
+  -moz-border-radius: 0.8em;
+  -webkit-border-radius: 0.8em;
+  color: white;
+  font-weight: bold;
+  line-height: 1.6em;
+  margin-right: 5px;
+  text-align: center;
+  width: 1.6em;
+  margin-left: -25px;
 }

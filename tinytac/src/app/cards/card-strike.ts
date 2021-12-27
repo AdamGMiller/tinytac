@@ -1,5 +1,5 @@
-import { Point } from '../model/point.model';
 import { Card } from './card';
+import { CardService } from './card.service';
 
 export class CardStrike extends Card {
   tag = 'strike';
@@ -9,15 +9,15 @@ export class CardStrike extends Card {
   damage = 4;
   range = 1;
 
-  constructor() {
-    super();
+  constructor(cardService: CardService) {
+    super(cardService);
   }
 
   canPlay(): boolean {
     return true;
   }
 
-  play(point: Point): void {
+  play(): void {
     // get enemy at point and damage them
 
     super.play();

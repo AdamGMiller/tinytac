@@ -31,6 +31,7 @@ import { Orientation } from '../model/orientation.model';
 import { Point } from '../model/point.model';
 import { TacMap } from '../model/tac-map.model';
 import { PlayerService } from '../services/player.service';
+import { TargetService } from '../services/target.service';
 import { BabylonUtilService } from '../util/babylon-util.service';
 import { Hex } from '../util/hex';
 import { Layout } from '../util/layout';
@@ -41,6 +42,7 @@ import { Layout } from '../util/layout';
 export class MapService {
   public mapStatus: BehaviorSubject<'initializing' | 'started' | 'loaded'> =
     new BehaviorSubject<'initializing' | 'started' | 'loaded'>('initializing');
+
   protected engine: Engine;
   protected canvas: HTMLCanvasElement;
   protected camera: FreeCamera | ArcRotateCamera;
@@ -87,7 +89,8 @@ export class MapService {
     @Inject(DOCUMENT) readonly document: Document,
     private http: HttpClient,
     private utilService: BabylonUtilService,
-    private playerService: PlayerService
+    private playerService: PlayerService,
+    private targetService: TargetService
   ) {}
 
   public createScene(canvas: ElementRef<HTMLCanvasElement>): void {
@@ -157,11 +160,11 @@ export class MapService {
           break;
         case PointerEventTypes.POINTERPICK:
           //console.log('POINTER PICK');
-          const id = pointerInfo.pickInfo.pickedMesh.uniqueId;
-          console.log(id);
+          const selectedHex = pointerInfo.pickInfo.pickedMesh.metadata as Hex;
+          this.targetService.selectedHex$.next(selectedHex);
           break;
         case PointerEventTypes.POINTERTAP:
-          console.log(pointerInfo.pickInfo.pickedMesh.name);
+          //console.log(pointerInfo.pickInfo.pickedMesh.name);
           break;
         case PointerEventTypes.POINTERDOUBLETAP:
           //console.log('POINTER DOUBLE-TAP');
@@ -255,7 +258,6 @@ export class MapService {
       mesh.isVisible = false;
       mesh.isPickable = false;
       mesh.setParent(null);
-      console.log('updated mesh', mesh);
     });
   }
 
@@ -297,11 +299,11 @@ export class MapService {
         modelMeshes.meshes.forEach((mesh: AbstractMesh, index: number) => {
           var newInstance = (mesh as Mesh).instantiateHierarchy(this.rootMesh);
           newInstance.name = `tile${rowIndex}-${columnIndex}-${index}`;
+          newInstance.metadata = hex;
           newInstance.position.x = centerOfHex.x;
           newInstance.position.z = centerOfHex.y;
           if (tile.height) {
             newInstance.position.y = tile.height - 5;
-            console.log(newInstance.position);
           }
           newInstance.setParent(this.rootMesh);
         });
@@ -311,7 +313,6 @@ export class MapService {
           const propMeshes = this.modelMeshes.find(
             (mesh) => mesh.name === tile.propModel
           );
-          console.log(propMeshes?.name, 'found');
           if (propMeshes) {
             propMeshes.meshes.forEach((mesh: AbstractMesh, index: number) => {
               var newInstance = (mesh as Mesh).instantiateHierarchy(
@@ -326,23 +327,18 @@ export class MapService {
         }
       });
     });
-
-    console.log(this.modelMeshes);
-
     this.mapStatus.next('loaded');
   }
 
   private addCharacter(): void {
     const hex = this.playerStartingHex;
-    console.log(hex);
-    console.log(this.playerService.character.model);
     const centerOfHex = this.hexLayout.hexToPixel(hex);
-    console.log(centerOfHex);
     const characterMeshes = this.modelMeshes.find(
       (mesh) => mesh.name === this.playerService.character.model
     );
 
     characterMeshes.meshes.forEach((mesh) => {
+      mesh.metadata = hex;
       mesh.position.x = centerOfHex.x;
       mesh.position.z = centerOfHex.y;
     });

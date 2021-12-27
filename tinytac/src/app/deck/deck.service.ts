@@ -1,14 +1,17 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
+import { skipWhile, take } from 'rxjs/operators';
 import { Card } from '../cards/card';
 import { CardFactoryService } from '../cards/card-factory.service';
 import { Character } from '../model/character.model';
+import { TargetService } from '../services/target.service';
+import { Hex } from '../util/hex';
 
 @Injectable({
   providedIn: 'root',
 })
 export class DeckService {
-  constructor(private cardFactoryService: CardFactoryService) {}
+  constructor(private targetService: TargetService) {}
 
   deck$: BehaviorSubject<Card[]> = new BehaviorSubject<Card[]>([]);
   hand$: BehaviorSubject<Card[]> = new BehaviorSubject<Card[]>([]);
@@ -18,9 +21,12 @@ export class DeckService {
   _hand: Card[] = [];
   _discard: Card[] = [];
 
-  loadDeckFromCharacter(character: Character) {
+  loadDeckFromCharacter(
+    character: Character,
+    cardFactoryService: CardFactoryService
+  ) {
     character.deck.forEach((cardTag) => {
-      const card = this.cardFactoryService.createCard(cardTag);
+      const card = cardFactoryService.createCard(cardTag);
       this._deck.push(card);
     });
 
@@ -52,16 +58,28 @@ export class DeckService {
   }
 
   selectCardToPlay(index: number): void {
+    const card = this._hand[index];
+    console.log('select card to play', card);
+
+    const targetTypes = card.allowedTargets();
     // if card doesn't require a target, just play it
-
     // see if card requires target, if so, start looking for target
-
     // have target service report back when a target is selected
-
     // finish playing card
+
+    this.targetService.clearSelectedHex();
+    this.targetService.selectedHex$
+      .pipe(
+        skipWhile((hex: Hex) => hex == null),
+        take(1)
+      )
+      .subscribe((hex: Hex) => {
+        console.log('selecting hex', hex);
+        this.playCard(index, hex);
+      });
   }
 
-  playCard(index: number): void {
+  playCard(index: number, target: Hex): void {
     this._hand[index].play();
 
     // either discard the card or if the card is on-time, just remove it completely
@@ -84,6 +102,10 @@ export class DeckService {
     this._hand.push(this._deck[0]);
     this._deck.splice(0, 1);
     this.updateObservables();
+  }
+
+  private getCardFromIndex(index: number): Card {
+    return this._hand[index];
   }
 
   private moveDiscardIntoDeckAndShuffle(): void {

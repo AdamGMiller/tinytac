@@ -1,3 +1,3 @@
-<div class="card-container" *ngIf="card">
+<div class="card-container" *ngIf="card" (click)="selectCard()">
     <div class="card-name">{{ card.name }}</div>
 </div>

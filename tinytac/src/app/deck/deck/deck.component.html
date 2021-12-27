@@ -4,11 +4,12 @@
     <div class="alert-number">{{ (this.deckService.deck$ | async).length }}</div>
   </div>
   <div class="hand">
-    <div *ngFor="let card of this.deckService.hand$ | async">
-        <tt-card [card]="card"></tt-card>
+    <div *ngFor="let card of this.deckService.hand$ | async; let i = index">
+        <tt-card (select)="select($event, i)" [card]="card"></tt-card>
     </div>
   </div>
   <div class="discard-pile">
+    <button (click)="combatService.playerTurnEnd()">End turn</button>
     Discard: 
     <div class="alert-number">{{ (this.deckService.discard$ | async).length }}</div>
   </div>

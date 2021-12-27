@@ -1,4 +1,4 @@
-import { Point } from '../model/point.model';
+import { CardService } from './card.service';
 import { TargetType } from './target-type.enum';
 
 export class Card {
@@ -9,7 +9,14 @@ export class Card {
   range?: number;
   damage?: number;
 
+  constructor(private cardService: CardService) {}
+
   canPlay(): boolean {
+    // can player pay the energy cost?
+    if (!this.cardService.playerHasEnoughEnergy) {
+      return false;
+    }
+
     return true;
   }
 
@@ -21,7 +28,7 @@ export class Card {
     return true;
   }
 
-  play(point?: Point): void {
+  play(): void {
     // discard card
   }
 }

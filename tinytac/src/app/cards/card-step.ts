@@ -1,5 +1,5 @@
-import { Point } from '../model/point.model';
 import { Card } from './card';
+import { CardService } from './card.service';
 
 export class CardStep extends Card {
   tag = 'step';
@@ -7,16 +7,17 @@ export class CardStep extends Card {
   description: 'Take a step in any direction.';
   cost = 0;
 
-  constructor() {
-    super();
+  constructor(cardService: CardService) {
+    super(cardService);
   }
 
   canPlay(): boolean {
     return true;
   }
 
-  play(point: Point): void {
+  play(): void {
     // move player to hex point
+    console.log('playing step');
 
     super.play();
   }
